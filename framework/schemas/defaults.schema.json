@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schemaVersion", "pins", "locked"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "pins": {
+      "type": "object",
+      "required": ["orca", "orcaAgentContextSchema", "claude", "codex", "gh"],
+      "additionalProperties": false,
+      "properties": {
+        "orca": {"type": "string"},
+        "orcaAgentContextSchema": {"type": "integer"},
+        "claude": {"type": "string"},
+        "codex": {"type": "string"},
+        "gh": {"type": "string"}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"autostart": {"type": "boolean"}}
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "remediation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"maxCycles": {"type": "integer", "minimum": 1}}
+        }
+      }
+    },
+    "locked": {"type": "object", "minProperties": 1}
+  },
+  "additionalProperties": false
+}

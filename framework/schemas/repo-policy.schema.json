@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schemaVersion", "baseBranch", "branchPattern", "verification"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "baseBranch": {"type": "string"},
+    "branchPattern": {"type": "string", "pattern": "^agent/"},
+    "pr": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "template": {"type": "string"},
+        "draft": {"type": "boolean"},
+        "labels": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["manifest"],
+      "additionalProperties": false,
+      "properties": {"manifest": {"type": "string"}}
+    },
+    "trustedAgentConfig": {"type": "array", "items": {"type": "string"}},
+    "overrides": {"type": "object"}
+  }
+}

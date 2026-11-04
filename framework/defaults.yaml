@@ -1,0 +1,27 @@
+schemaVersion: 1
+pins:
+  orca: "1.4.197"
+  orcaAgentContextSchema: 1
+  claude: "2.1.299"
+  codex: "0.163.0"
+  gh: "2.92.0"
+runtime:
+  autostart: false
+workflow:
+  remediation:
+    maxCycles: 2
+# Locked invariants: dotted path -> required value. No layer may change them.
+locked:
+  merge.byAgent: forbidden
+  redaction.enabled: true
+  agentFlags.deny:
+    claude:
+      - "--dangerously-skip-permissions"
+      - "--allow-dangerously-skip-permissions"
+      - "--permission-mode=bypassPermissions"
+    codex:
+      - "--dangerously-bypass-approvals-and-sandbox"
+      - "--sandbox=danger-full-access"
+      - "--dangerously-bypass-hook-trust"
+  verification.manifestRequired: true
+  review.afterRemediation: mandatory
