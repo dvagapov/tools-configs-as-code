@@ -55,7 +55,17 @@ def init(dest, name, repo_specs, framework_ref=None):
     r = _git("init", "-q", "-b", "main", cwd=dest)
     if r.returncode:
         raise ConfigError(f"git init failed: {r.stderr.strip()}")
+    hook = dest / ".git" / "hooks" / "pre-commit"
+    hook.write_text(PRE_COMMIT)
+    hook.chmod(0o755)
     return dest
+
+
+PRE_COMMIT = """#!/bin/sh
+# Installed by `cac project init`: block commits that contain secrets.
+command -v cac >/dev/null 2>&1 || { echo "cac not found: refusing to commit without a secret scan" >&2; exit 1; }
+exec cac scan --staged
+"""
 
 
 def _origin(path):
