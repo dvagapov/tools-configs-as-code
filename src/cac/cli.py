@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from cac import project, wiki
+from cac import audit_review, project, publish, wiki
 from cac.config import ConfigError
 
 
@@ -18,6 +18,23 @@ def main(argv=None):
 
     s = pr.add_parser("sync", help="clone or fetch the project's app repos")
     s.add_argument("dir", nargs="?", default=".")
+
+    pb = pr.add_parser("publish", help="commit wiki/audit changes on a branch and open a PR/MR (never merges)")
+    pb.add_argument("-m", "--message", required=True)
+    pb.add_argument("dir", nargs="?", default=".")
+
+    au = sub.add_parser("audit").add_subparsers(dest="cmd", required=True)
+    rv = au.add_parser("review", help="write audit/summaries/<run>.md from local audit data")
+    rv.add_argument("run_id")
+    rv.add_argument("--audit-dir", required=True)
+    rv.add_argument("--project", default=".")
+    rv.add_argument("--reviewer", choices=["none", "codex"], default="none")
+    ak = au.add_parser("ack", help="acknowledge a high-severity summary (human, interactive terminal only)")
+    ak.add_argument("run_id")
+    ak.add_argument("--by", required=True)
+    ak.add_argument("--project", default=".")
+    gt = au.add_parser("gate", help="fail if a staged summary has an unacknowledged high-severity finding")
+    gt.add_argument("--project", default=".")
 
     sc = sub.add_parser("scan", help="secret scan of a project repo")
     sc.add_argument("dir", nargs="?", default=".")
@@ -37,6 +54,12 @@ def main(argv=None):
             return _scan(a)
         if a.group == "wiki":
             return _wiki(a)
+        if a.group == "audit":
+            return _audit(a)
+        if a.cmd == "publish":
+            kind, out = publish.publish(a.dir, a.message)
+            print(f"{kind}: {out}")
+            return 0
         if a.cmd == "init":
             print(f"created {project.init(a.dest, a.name, a.repo, a.framework_ref)}")
             return 0
@@ -56,6 +79,24 @@ def _scan(a):
     for path in unscanned:
         print(f"unscanned (not text): {path}", file=sys.stderr)
     return 1 if findings else 0
+
+
+def _audit(a):
+    if a.cmd == "review":
+        reviewer = audit_review.codex_reviewer if a.reviewer == "codex" else None
+        path, sev = audit_review.review(a.run_id, a.audit_dir, a.project, reviewer=reviewer)
+        print(f"{path} severity={sev}")
+        return 0
+    if a.cmd == "ack":
+        if not sys.stdin.isatty():
+            raise ConfigError("ack needs an interactive terminal: it is a human decision")
+        audit_review.acknowledge(a.project, a.run_id, a.by)
+        print("acknowledged")
+        return 0
+    blocked = audit_review.gate(a.project)
+    for b in blocked:
+        print(f"BLOCKED {b}: high severity, not acknowledged")
+    return 1 if blocked else 0
 
 
 def _wiki(a):

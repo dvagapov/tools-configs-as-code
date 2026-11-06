@@ -62,9 +62,10 @@ def init(dest, name, repo_specs, framework_ref=None):
 
 
 PRE_COMMIT = """#!/bin/sh
-# Installed by `cac project init`: block commits that contain secrets.
-command -v cac >/dev/null 2>&1 || { echo "cac not found: refusing to commit without a secret scan" >&2; exit 1; }
-exec cac scan --staged
+# Installed by `cac project init`: block commits with secrets or unacknowledged high-severity audit summaries.
+command -v cac >/dev/null 2>&1 || { echo "cac not found: refusing to commit without checks" >&2; exit 1; }
+cac scan --staged || exit 1
+exec cac audit gate
 """
 
 

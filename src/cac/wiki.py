@@ -33,18 +33,23 @@ def _decode(data):
         return None
 
 
+def staged_blobs(root):
+    """Yield (path, bytes) of every staged added/changed file, as staged (not the worktree)."""
+    r = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+                       cwd=root, capture_output=True)
+    if r.returncode:
+        raise ConfigError(f"git diff --cached failed: {r.stderr.decode().strip()}")
+    for n in (n for n in r.stdout.decode().split("\0") if n):
+        yield n, subprocess.run(["git", "show", f":{n}"], cwd=root, capture_output=True).stdout
+
+
 def scan_project(project, staged=False):
     """Scan the project repo. Returns (findings, unscanned) where findings are
     (path, line, pattern) and unscanned lists non-text files that could not be checked."""
     root = Path(project).resolve()
     findings, unscanned = [], []
     if staged:
-        r = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
-                           cwd=root, capture_output=True)
-        if r.returncode:
-            raise ConfigError(f"git diff --cached failed: {r.stderr.decode().strip()}")
-        names = [n for n in r.stdout.decode().split("\0") if n]
-        blobs = ((n, subprocess.run(["git", "show", f":{n}"], cwd=root, capture_output=True).stdout) for n in names)
+        blobs = staged_blobs(root)
     else:
         files = (p for p in sorted(root.rglob("*"))
                  if p.is_file() and not SKIP_DIRS & set(p.relative_to(root).parts))
