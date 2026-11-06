@@ -84,3 +84,23 @@ def test_invalid_manifests_rejected(tmp_path):
         verify(manifest(tmp_path, {"id": "a", "run": "npm test", "expectExit": 0}), tmp_path)  # string, not argv
     with pytest.raises(ConfigError, match="duplicate"):
         verify(manifest(tmp_path, step("a"), step("a")), tmp_path)
+
+
+def test_end_to_end_state_machine_with_real_verify(tmp_path):
+    from pathlib import Path
+    from cac.config import load_config
+    from cac.verify import make_verify_fn
+    from cac.workflow import run
+
+    cfg = load_config(Path(__file__).resolve().parents[1] / "framework" / "defaults.yaml")
+    probes = {**cfg["pins"], "runtime": "running"}
+    # a failing manifest the "agent" cannot talk its way past
+    m = manifest(tmp_path, step("unit", "import sys; sys.exit(1)"))
+    script = {"plan_gate": "approved", "precommit_review": "pass", "final_review": "pass", "await_merge": "merged"}
+    res = run(cfg, lambda s: script.get(s, "ok"), lambda: True, probes, make_verify_fn(m, tmp_path))
+    assert res.final == "blocked:remediation_exhausted"
+    assert any(e["event"] == "step_result" and e["reason"] == "exit_mismatch" for e in res.events)
+
+    m = manifest(tmp_path, step("unit"))
+    res = run(cfg, lambda s: script.get(s, "ok"), lambda: True, probes, make_verify_fn(m, tmp_path))
+    assert res.final == "done"

@@ -105,7 +105,7 @@ def test_workflow_events_audited(tmp_path):
     ok = {**CFG["pins"], "runtime": "running"}
     script = {"plan_gate": "approved", "precommit_review": "pass", "verify_run": "pass",
               "final_review": "pass", "await_merge": "merged"}
-    res = run(CFG, lambda s: script.get(s, "ok"), lambda: True, ok)
+    res = run(CFG, lambda s: script.get(s, "ok"), lambda: True, ok, lambda: ("pass", []))
     w = writer(tmp_path)
     w.extend(res.events)
     recs = lines(w)

@@ -3,8 +3,12 @@
 The machine owns transitions, retry/remediation limits and the hard stops.
 An adapter (real Orca-backed, or a fake in tests) only reports an outcome
 string per state; it never chooses the next state.
+
+verify_run is decided by the wrapper's verify_fn, never by the adapter.
 """
 from dataclasses import dataclass, field
+
+from cac.config import ConfigError
 
 TRANSITIONS = {
     "intake": {"ok": "plan"},
@@ -41,8 +45,9 @@ def preflight(config, probes):
     return None
 
 
-def run(config, adapter, manifest_exists, probes):
-    """adapter(state) -> outcome. manifest_exists() -> bool, checked by the wrapper."""
+def run(config, adapter, manifest_exists, probes, verify_fn):
+    """adapter(state) -> outcome. manifest_exists() -> bool and
+    verify_fn() -> ("pass"|"mismatch", step_results) are wrapper-side."""
     events = []
 
     def ev(**kw):
@@ -61,7 +66,15 @@ def run(config, adapter, manifest_exists, probes):
     for _ in range(MAX_STEPS):
         if state == "done":
             return RunResult("done", events)
-        outcome = adapter(state)
+        if state == "verify_run":
+            try:
+                outcome, results = verify_fn()
+            except ConfigError:
+                return blocked("bad_manifest")
+            for r in results:
+                ev(event="step_result", state=state, **r)
+        else:
+            outcome = adapter(state)
         ev(event="outcome", state=state, outcome=outcome)
 
         if outcome == "pending" and state in HUMAN_STATES:

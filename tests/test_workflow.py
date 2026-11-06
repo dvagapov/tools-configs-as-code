@@ -16,6 +16,9 @@ HAPPY = {
 }
 
 
+NEVER = lambda: pytest.fail("verify must not run")
+
+
 def fake(script):
     """Per-state queue of outcomes; the last one repeats."""
     q = {k: list(v) for k, v in script.items()}
@@ -26,8 +29,10 @@ def fake(script):
     return adapter
 
 
-def go(script, manifest=True, probes=GOOD, cfg=CFG):
-    return run(cfg, fake({**HAPPY, **script}), lambda: manifest, probes)
+def go(script, manifest=True, probes=GOOD, cfg=CFG, verify_fn=None):
+    full = {**HAPPY, **script}
+    vf = fake({"verify_run": full.pop("verify_run")})
+    return run(cfg, fake(full), lambda: manifest, probes, verify_fn or (lambda: (vf("verify_run"), [])))
 
 
 def path(res):
@@ -98,7 +103,7 @@ def test_unknown_outcome_blocks():
 
 def test_runtime_down_blocks_before_any_launch():
     calls = []
-    res = run(CFG, lambda s: calls.append(s) or "ok", lambda: True, {**GOOD, "runtime": "not_running"})
+    res = run(CFG, lambda s: calls.append(s) or "ok", lambda: True, {**GOOD, "runtime": "not_running"}, NEVER)
     assert res.final == "blocked:no_runtime"
     assert calls == []
 
@@ -106,6 +111,23 @@ def test_runtime_down_blocks_before_any_launch():
 @pytest.mark.parametrize("name", ["orca", "claude", "codex", "gh", "orcaAgentContextSchema"])
 def test_version_drift_blocks_before_any_launch(name):
     calls = []
-    res = run(CFG, lambda s: calls.append(s) or "ok", lambda: True, {**GOOD, name: "9.9.9"})
+    res = run(CFG, lambda s: calls.append(s) or "ok", lambda: True, {**GOOD, name: "9.9.9"}, NEVER)
     assert res.final == "blocked:drift"
     assert calls == []
+
+
+def test_verify_run_outcome_comes_from_wrapper_not_adapter():
+    seen = []
+    adapter = fake({k: v for k, v in HAPPY.items() if k != "verify_run"} | {"verify_run": ["pass"]})
+    res = run(CFG, adapter, lambda: True, GOOD,
+              lambda: seen.append(1) or ("mismatch", [{"step": "unit", "passed": False}]))
+    assert res.final == "blocked:remediation_exhausted"  # adapter's "pass" was ignored
+    assert seen and any(e["event"] == "step_result" and e["step"] == "unit" for e in res.events)
+
+
+def test_invalid_manifest_blocks():
+    from cac.config import ConfigError
+
+    def bad():
+        raise ConfigError("nope")
+    assert go({}, verify_fn=bad).final == "blocked:bad_manifest"

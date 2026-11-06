@@ -57,3 +57,8 @@ def verify(manifest_path, cwd):
     manifest = load_manifest(manifest_path)
     results = [run_step(s, cwd) for s in manifest["steps"]]
     return ("pass" if all(r["passed"] for r in results) else "mismatch"), results
+
+
+def make_verify_fn(manifest_path, cwd):
+    """Bind a manifest and workdir into the zero-arg callable the state machine expects."""
+    return lambda: verify(manifest_path, cwd)
