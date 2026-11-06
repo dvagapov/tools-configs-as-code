@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profiles"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "profiles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent"],
+        "properties": {
+          "agent": {"enum": ["claude", "codex"]},
+          "model": {"type": ["string", "null"]},
+          "effort": {"enum": ["low", "medium", "high", "xhigh", "max"]},
+          "permissionMode": {"type": "string"},
+          "allowedTools": {"type": "array", "items": {"type": "string"}},
+          "sandbox": {"enum": ["read-only", "workspace-write", "danger-full-access"]},
+          "allowedCommands": {"type": "array", "items": {"type": "string"}}
+        },
+        "allOf": [
+          {"if": {"properties": {"agent": {"const": "claude"}}},
+           "then": {"not": {"anyOf": [{"required": ["sandbox"]}, {"required": ["allowedCommands"]}]}}},
+          {"if": {"properties": {"agent": {"const": "codex"}}},
+           "then": {"not": {"anyOf": [{"required": ["permissionMode"]}, {"required": ["allowedTools"]}]}}}
+        ]
+      }
+    }
+  }
+}
