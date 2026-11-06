@@ -25,3 +25,4 @@ locked:
       - "--dangerously-bypass-hook-trust"
   verification.manifestRequired: true
   review.afterRemediation: mandatory
+  audit.blockOnHighSeverity: true

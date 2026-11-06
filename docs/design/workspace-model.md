@@ -37,7 +37,9 @@ The project repo is the context an LLM is given for: new tickets, investigations
   - Raw data is stored in this private repo, so a **secret scan runs before commit**. The audit redactor does not cover `raw/`.
 - Sync and backup: changes go to a work branch and a **PR; a human merges**. Agents never merge. Teammates' changes sync through the same PRs.
   - Conflicts on page content are surfaced for a human, never auto-resolved.
-  - **Open:** may solo use push straight to the main branch through a config switch?
+  - **Solo switch (decided):** a config switch, `wiki.directPush` in `workspace.yaml` (default `false`), lets solo use push wiki and audit-summary changes straight to the project repo's main branch instead of opening a PR.
+    - Proposed guardrails: it applies only to the project repo, never to app repos; the wrapper refuses to start a run if `wiki.directPush` changed in the same run that would use it; `workspace.yaml` is never written by an agent in a run. Without these, an agent could flip the switch and bypass human merge.
+    - Not locked, because solo use must be able to turn it on. Not implemented yet (W5).
 
 ## Audit
 
@@ -52,7 +54,7 @@ The project repo is the context an LLM is given for: new tickets, investigations
   - The reviewer gets audit text as quoted data in a read-only sandbox with no tools (audit text can carry prompt injection from repo content).
   - The summary is an aid, not evidence. Local files can be edited, so tamper evidence is still missing.
 - **clickOps limit:** the audit only sees what the wrapper and agents did. Changes made by hand in a console, or by tools outside a run, are invisible to it. Real detection needs another source (e.g. `terraform plan` drift output, cloud or `gh api` state) fed into the same review.
-- **Open:** should a high-severity finding (deny-listed flag, merge attempt) block the commit until a human acknowledges it? Proposed default: yes.
+- **High-severity findings block the commit until a human acknowledges it (decided).** Locked invariant `audit.blockOnHighSeverity: true` in the framework defaults; no layer can turn it off. What counts as high severity (deny-listed flag, merge attempt, secret in output, ...) is defined by the deterministic checks, not by the LLM. Enforcement is part of W8; today the key only exists as a locked value.
 - Limit for context use: the committed summaries are what the LLM can read later. Questions that need detail from a past run cannot be answered from them once the local raw files are gone.
 
 ## Incidents

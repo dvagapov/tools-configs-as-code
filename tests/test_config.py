@@ -50,6 +50,7 @@ def test_repo_overrides_workspace():
     ("redaction.enabled", False, "redaction.enabled"),
     ("review.afterRemediation", "optional", "review.afterRemediation"),
     ("verification.manifestRequired", False, "verification.manifestRequired"),
+    ("audit.blockOnHighSeverity", False, "audit.blockOnHighSeverity"),
     ("agentFlags.deny", {"claude": [], "codex": []}, "agentFlags.deny"),
     ("agentFlags.deny.claude", [], "agentFlags.deny"),  # error names the locked parent
 ])
