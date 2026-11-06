@@ -5,6 +5,9 @@ description = "Config-as-code wrapper for Orca-driven agent workflows"
 requires-python = ">=3.11"
 dependencies = ["pyyaml>=6", "jsonschema>=4"]
 
+[project.scripts]
+cac = "cac.cli:main"
+
 [project.optional-dependencies]
 test = ["pytest>=8"]
 

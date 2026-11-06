@@ -1,0 +1,6 @@
+# Cloned app repos (managed by `cac project sync`)
+repos/
+# Raw audit data stays local; only reviewed summaries in audit/summaries/ are committed
+.cac-local/
+audit/runs/
+*.audit.jsonl

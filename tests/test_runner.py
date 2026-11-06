@@ -25,7 +25,7 @@ def env(tmp_path):
     ws = tmp_path / "workspace.yaml"
     ws.write_text(yaml.safe_dump({
         "schemaVersion": 1, "workspace": "acme", "frameworkRef": "x@v1",
-        "repos": [{"name": "fx", "url": "u", "host": "github"}]}))
+        "repos": [{"name": "fx", "url": "https://github.com/o/fx.git", "host": "github"}]}))
     policy = tmp_path / "repo-policy.yaml"
 
     def write_policy(manifest=".cac/verify.yaml"):

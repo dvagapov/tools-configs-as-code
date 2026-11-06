@@ -9,9 +9,8 @@
     "frameworkRef": {"type": "string"},
     "wiki": {
       "type": "object",
-      "required": ["repo", "branch"],
       "additionalProperties": false,
-      "properties": {"repo": {"type": "string"}, "branch": {"type": "string"}}
+      "properties": {"directPush": {"type": "boolean", "default": false}}
     },
     "repos": {
       "type": "array",
@@ -21,8 +20,8 @@
         "required": ["name", "url", "host"],
         "additionalProperties": false,
         "properties": {
-          "name": {"type": "string"},
-          "url": {"type": "string"},
+          "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+          "url": {"type": "string", "pattern": "^(git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+|https://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+)$"},
           "host": {"enum": ["github", "gitlab"]}
         }
       }
