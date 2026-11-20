@@ -64,10 +64,42 @@ orca orchestration worker-show --dispatch <id> --json     # state / stage
 
 `run-create` requires `--objective`. `worker-start` requires the coordinator terminal bound to the run. `worker-read`, `worker-show` and `worker-stop` do not accept `--from`.
 
+### Corrections to the requirements above
+
+- The `--dangerously-skip-permissions` flag came from the user's Orca agent config, not from Orca itself. The user removed it; later runs worked without it. The flag still cannot be enforced from the wrapper for Orca workers.
+- The folder-trust prompt can be pre-accepted by setting `hasTrustDialogAccepted` for the exact path in `~/.claude.json`.
+- `worker-start --worktree path:<repo>` needs the repo registered (`orca repo add --path`). The adapter now does this.
+- If the agent launcher shows "disabled or unavailable", fix it in Orca settings; it is not a wrapper error.
+
+### Codex
+
+- Orca launches `codex` unsandboxed (YOLO). It also shows its own hook-review prompt, which must be accepted once per directory.
+- Decision: Codex states do not run as Orca workers. The wrapper calls `codex exec -s read-only` (reviewer) and `-s workspace-write` (verify author) directly. `fingerprint()` checks the verifier changed nothing outside `.cac/`.
+- Not tested live as an Orca worker beyond the launch and trust prompts. The wrapper-side `codex exec` path ran live in the workflow below.
+
+### Pins and drift
+
+- Preflight blocked on drift several times: claude 2.1.299 → 2.1.328, codex 0.163.0 → 0.170.0. Pins now: orca 1.4.197, claude 2.1.328, codex 0.170.0, gh 2.92.0.
+- `claude` auto-updates, so an exact pin will keep tripping. Not resolved.
+
+### Real project workflow (2026-11-20)
+
+Fixture: `dvagapov/orca-workflow-fixture`, run `r_t1f`, claude-first, desktop app, Terminal mode.
+
+`intake → plan → plan_gate → implement → precommit_review → verify_author → verify_run → final_review → publish → await_merge → wiki_update → done`
+
+- `plan_gate` stayed closed until the approval file existed outside the repo. Typing "approved" in chat did not open it.
+- `publish` opened draft PR #1. The human merged it; `await_merge` read `merged`.
+- `wiki_update` ran a claude worker in a separate local project repo. It added `wiki/pages/hello-function.md` and updated the index and log. `cac wiki lint` passed. The changes were left uncommitted.
+- Resume works: a run restarts at the human gate it waited at, or at the state that ended `blocked:<tool error>`. Policy stops restart at `intake`.
+- Bugs found and fixed on the way: Orca errors swallowed as `fail`; a stale `review.md` caused a bogus finding; `__pycache__` appeared in the diff (now `PYTHONDONTWRITEBYTECODE=1` plus prompt rules).
+- Fixture repo had a ruleset requiring one approval; the user removed it to merge. The ruleset file is untracked at `framework/rulesets/`.
+
 ### Still unverified
 
-- A real `codex` worker.
-- The real project workflow (`cac.workflow.run` with the Orca adapter).
+- Failure paths live: `remediate`, `verify_run` failure and `final_review` findings loops.
+- Locked agent flags are not enforced for Orca workers.
+- Manifest steps run unsandboxed with the full environment.
 - Why structured mode fails for workers.
 
 ### Cleanup left behind
