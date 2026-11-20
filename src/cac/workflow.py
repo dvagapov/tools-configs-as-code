@@ -45,9 +45,10 @@ def preflight(config, probes):
     return None
 
 
-def run(config, adapter, manifest_exists, probes, verify_fn):
+def run(config, adapter, manifest_exists, probes, verify_fn, start="intake"):
     """adapter(state) -> outcome. manifest_exists() -> bool and
-    verify_fn() -> ("pass"|"mismatch", step_results) are wrapper-side."""
+    verify_fn() -> ("pass"|"mismatch", step_results) are wrapper-side.
+    `start` resumes a run that stopped at a human gate."""
     events = []
 
     def ev(**kw):
@@ -62,7 +63,7 @@ def run(config, adapter, manifest_exists, probes, verify_fn):
         return blocked(pre.split(":", 1)[1])
 
     max_cycles = config["workflow"]["remediation"]["maxCycles"]
-    state, retries, cycles = "intake", {}, 0
+    state, retries, cycles = start, {}, 0
     for _ in range(MAX_STEPS):
         if state == "done":
             return RunResult("done", events)

@@ -4,6 +4,7 @@ The wrapper, not the agent, decides pass/fail. Only a hash and byte count of
 the output are kept (never the output itself).
 """
 import hashlib
+import os
 import subprocess
 from pathlib import Path
 
@@ -31,7 +32,8 @@ def run_step(step, cwd):
     res = {"step": step["id"], "expected": step["expectExit"], "exit": None,
            "missingArtifacts": [], "stdoutSha256": None, "bytes": 0, "reason": None}
     try:
-        p = subprocess.run(step["run"], cwd=root, capture_output=True,
+        # No bytecode: verification must not leave __pycache__ in the tree that gets published.
+        p = subprocess.run(step["run"], cwd=root, capture_output=True, env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
                            timeout=step.get("timeoutSec", DEFAULT_TIMEOUT))
     except subprocess.TimeoutExpired:
         res["reason"] = "timeout"

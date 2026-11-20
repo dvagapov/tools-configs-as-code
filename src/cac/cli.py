@@ -1,8 +1,11 @@
 import argparse
+import re
 import sys
+from pathlib import Path
 
 from cac import audit_review, project, publish, wiki
-from cac.config import ConfigError
+from cac import orca_adapter, render, runner
+from cac.config import ConfigError, load_config
 
 
 def main(argv=None):
@@ -36,6 +39,17 @@ def main(argv=None):
     gt = au.add_parser("gate", help="fail if a staged summary has an unacknowledged high-severity finding")
     gt.add_argument("--project", default=".")
 
+    wf = sub.add_parser("workflow").add_subparsers(dest="cmd", required=True)
+    wr = wf.add_parser("run", help="run the workflow with Orca workers (thin slice: plan, implement)")
+    wr.add_argument("--repo", required=True, help="app repo working copy")
+    wr.add_argument("--workspace", required=True, help="workspace.yaml")
+    wr.add_argument("--policy", required=True, help="repo policy yaml")
+    wr.add_argument("--task", required=True)
+    wr.add_argument("--audit-dir", required=True)
+    wr.add_argument("--run-id", required=True)
+    wr.add_argument("--project", help="project repo; enables the wiki_update worker")
+    wr.add_argument("--timeout", type=int, default=600, help="seconds per worker")
+
     sc = sub.add_parser("scan", help="secret scan of a project repo")
     sc.add_argument("dir", nargs="?", default=".")
     sc.add_argument("--staged", action="store_true", help="scan staged content only (pre-commit)")
@@ -54,6 +68,8 @@ def main(argv=None):
             return _scan(a)
         if a.group == "wiki":
             return _wiki(a)
+        if a.group == "workflow":
+            return _workflow(a)
         if a.group == "audit":
             return _audit(a)
         if a.cmd == "publish":
@@ -70,6 +86,25 @@ def main(argv=None):
     for name, (status, detail) in results.items():
         print(f"{status:8} {name}" + (f"  {detail}" if detail else ""))
     return 1 if any(s == "error" for s, _ in results.values()) else 0
+
+
+def _workflow(a):
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", a.run_id):
+        raise ConfigError(f"invalid run id: {a.run_id}")
+    defaults = Path(__file__).resolve().parents[2] / "framework" / "defaults.yaml"
+    audit_dir = Path(a.audit_dir)
+    config = load_config(defaults, a.workspace, a.policy)
+    adapter = orca_adapter.OrcaAdapter(a.repo, a.task, a.run_id, config, render.load_profiles(),
+                                       audit_dir / f"{a.run_id}.approved", project=a.project, timeout_s=a.timeout)
+    try:
+        res = runner.run_workflow(defaults, a.workspace, a.policy, a.repo, adapter,
+                                  orca_adapter.probe(), audit_dir, a.run_id)
+    finally:
+        adapter.close()
+    print(res.final)
+    if adapter.pr:
+        print(f"pr: {adapter.pr}")
+    return 0 if res.final == "done" or res.final.startswith("waiting:") else 1
 
 
 def _scan(a):

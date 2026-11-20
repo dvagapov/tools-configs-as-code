@@ -104,3 +104,11 @@ def test_end_to_end_state_machine_with_real_verify(tmp_path):
     m = manifest(tmp_path, step("unit"))
     res = run(cfg, lambda s: script.get(s, "ok"), lambda: True, probes, make_verify_fn(m, tmp_path))
     assert res.final == "done"
+
+
+def test_steps_do_not_write_bytecode(tmp_path):
+    from cac.verify import run_step
+    (tmp_path / "m.py").write_text("x = 1\n")
+    step = {"id": "imp", "run": ["python3", "-c", "import m"], "expectExit": 0}
+    assert run_step(step, tmp_path)["passed"]
+    assert not (tmp_path / "__pycache__").exists()

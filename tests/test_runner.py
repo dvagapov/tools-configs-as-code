@@ -87,3 +87,41 @@ def test_invalid_config_raises_before_audit(env):
     with pytest.raises(ConfigError):
         go(env)
     assert not env.audit.exists()
+
+
+def test_waiting_run_resumes_from_its_gate_not_from_intake(env):
+    env.write_verify("pass")
+    seen, approved = [], []
+
+    def adapter(state):
+        seen.append(state)
+        return "pending" if state == "plan_gate" and not approved else SCRIPT.get(state, "ok")
+
+    first = run_workflow(DEFAULTS, env.ws, env.policy, env.repo, adapter, PROBES, env.audit, "r_9")
+    assert first.final == "waiting:plan_gate"
+    seen.clear()
+    approved.append(1)
+    second = run_workflow(DEFAULTS, env.ws, env.policy, env.repo, adapter, PROBES, env.audit, "r_9")
+    assert second.final == "done" and seen[0] == "plan_gate" and "intake" not in seen and "plan" not in seen
+
+
+def test_tool_error_block_resumes_at_its_state_but_policy_stops_do_not(env):
+    env.write_verify("pass")
+    seen, broken = [], [1]
+
+    def adapter(state):
+        seen.append(state)
+        if state == "wiki_update" and broken:
+            return "blocked:orca down"
+        return SCRIPT.get(state, "ok")
+
+    first = run_workflow(DEFAULTS, env.ws, env.policy, env.repo, adapter, PROBES, env.audit, "r_8")
+    assert first.final == "blocked:orca down"
+    seen.clear()
+    broken.clear()
+    assert run_workflow(DEFAULTS, env.ws, env.policy, env.repo, adapter, PROBES, env.audit, "r_8").final == "done"
+    assert seen == ["wiki_update"]
+    seen.clear()  # a policy stop (drift) never resumes mid-run
+    run_workflow(DEFAULTS, env.ws, env.policy, env.repo, adapter, {**PROBES, "runtime": "down"}, env.audit, "r_7")
+    assert run_workflow(DEFAULTS, env.ws, env.policy, env.repo, adapter, PROBES, env.audit, "r_7").final == "done"
+    assert seen[0] == "intake"
