@@ -2,8 +2,8 @@ schemaVersion: 1
 pins:
   orca: "1.4.197"
   orcaAgentContextSchema: 1
-  claude: "2.1.299"
-  codex: "0.163.0"
+  claude: "2.1.328"
+  codex: "0.170.0"
   gh: "2.92.0"
 runtime:
   autostart: false

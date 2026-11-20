@@ -19,8 +19,8 @@ schemaVersion: 1
 pins:                        # drift check before every run
   orca: "1.4.197"            # `orca --version`
   orcaAgentContextSchema: 1  # `orca agent-context --json` .schemaVersion
-  claude: "2.1.299"          # `claude --version`
-  codex: "0.163.0"           # `codex --version`
+  claude: "2.1.328"          # `claude --version`
+  codex: "0.170.0"           # `codex --version`
   gh: "2.92.0"
 runtime:
   autostart: false           # never run `orca open` implicitly
@@ -137,7 +137,7 @@ run: r_…
 workspace: acme
 repo: orca-workflow-fixture
 configSha256: "…"
-pins: {orca: "1.4.197", claude: "2.1.299", codex: "0.163.0"}
+pins: {orca: "1.4.197", claude: "2.1.328", codex: "0.170.0"}
 orca: {runId: "…", dispatches: ["…"]}
 launches:
   - profile: planner
