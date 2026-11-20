@@ -1,0 +1,28 @@
+schemaVersion: 1
+profiles:
+  planner:
+    agent: claude
+    model: opus
+    effort: high
+    permissionMode: plan
+  implementer:
+    agent: claude
+    model: sonnet
+    effort: medium
+    permissionMode: default
+    allowedTools: ["Read", "Edit", "Bash(git diff *)", "Bash(git status *)", "Bash(git commit *)"]
+  reviewer:
+    agent: codex
+    model: null
+    effort: high
+    sandbox: read-only
+  verifier:
+    agent: codex
+    model: null
+    sandbox: workspace-write
+  git-ops:
+    agent: codex
+    model: null
+    sandbox: workspace-write
+    # Policy data only: Codex has no verified flag for command allow-lists, so this is not rendered.
+    allowedCommands: ["git push origin agent/*", "gh pr create", "gh pr view"]
