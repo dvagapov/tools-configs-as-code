@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from cac.config import load_config
-from cac.workflow import TRANSITIONS, run
+from cac.workflow import TRANSITIONS, preflight, run
 
 DEFAULTS = Path(__file__).resolve().parents[1] / "framework" / "defaults.yaml"
 CFG = load_config(DEFAULTS)
@@ -131,3 +131,10 @@ def test_invalid_manifest_blocks():
     def bad():
         raise ConfigError("nope")
     assert go({}, verify_fn=bad).final == "blocked:bad_manifest"
+
+
+@pytest.mark.parametrize("observed,blocked", [("2.1.329", False), ("2.1", False), ("2.2.0", True), ("2.10.0", True), (None, True)])
+def test_pin_is_a_dotted_prefix(observed, blocked):
+    cfg = {**CFG, "pins": {**CFG["pins"], "claude": "2.1"}}
+    got = preflight(cfg, {**GOOD, "claude": observed})
+    assert (got == "blocked:drift") is blocked

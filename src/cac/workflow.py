@@ -35,12 +35,19 @@ class RunResult:
     events: list = field(default_factory=list)
 
 
+def _pin_matches(pinned, observed):
+    """Exact match, or a dotted prefix: pin "2.1" accepts "2.1.329" but not "2.10.0"."""
+    if observed == pinned:
+        return True
+    return isinstance(pinned, str) and isinstance(observed, str) and observed.startswith(pinned + ".")
+
+
 def preflight(config, probes):
     """Return None if safe to launch, else a 'blocked:<reason>' string."""
     if probes.get("runtime") != "running":
         return "blocked:no_runtime"
     for name, pinned in config["pins"].items():
-        if probes.get(name) != pinned:
+        if not _pin_matches(pinned, probes.get(name)):
             return "blocked:drift"
     return None
 
